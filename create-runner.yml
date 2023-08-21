@@ -1,0 +1,8 @@
+- name: "Create Runner"
+  hosts: all
+  become: true
+  tasks:
+    - name: Exec container
+      community.docker.docker_container_exec:
+        container: "gitlab-runner"
+        command: "/bin/bash -c "

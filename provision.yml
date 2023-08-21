@@ -1,0 +1,60 @@
+- name: "Provision"
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: update cache
+      apt:
+        update_cache: true
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg
+        - git
+        - software-properties-common
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install Docker
+      apt:
+        name: "docker-ce"
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is running
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+    
+    - name: Add user to group
+      command: sudo usermod -aG docker $USER
+
+    - name: relogin to the system
+      command: echo vagrant | su - vagrant
+
+    - name: pull gitlab runner
+      community.docker.docker_image:
+        name: "gitlab/gitlab-runner:alpine"
+        source: pull
+
+    - name: Create gitlab runner container
+      community.docker.docker_container:
+        name: "gitlab-runner"
+        image: "gitlab/gitlab-runner:alpine"
+        volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - gitlab-runner-config:/etc/gitlab-runner
+        state: present
